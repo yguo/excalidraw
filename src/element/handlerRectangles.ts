@@ -187,6 +187,15 @@ export function handlerRectangles(
     pointerType,
   );
 
+  if (element.type === "group") {
+    return {
+      ne: handlers.ne,
+      nw: handlers.nw,
+      se: handlers.se,
+      sw: handlers.sw,
+    } as typeof handlers;
+  }
+
   if (
     element.type === "arrow" ||
     element.type === "line" ||

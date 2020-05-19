@@ -54,7 +54,8 @@ export type ActionName =
   | "changeFontFamily"
   | "changeTextAlign"
   | "toggleFullScreen"
-  | "toggleShortcuts";
+  | "toggleShortcuts"
+  | "groupSelected";
 
 export interface Action {
   name: ActionName;

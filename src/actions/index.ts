@@ -44,3 +44,5 @@ export {
   actionFullScreen,
   actionShortcuts,
 } from "./actionMenu";
+
+export { actionGroupSelected } from "./actionGroupSelected";

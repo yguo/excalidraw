@@ -2187,6 +2187,14 @@ class App extends React.Component<any, AppState> {
               x: element.x + x - lastX,
               y: element.y + y - lastY,
             });
+            if (element.type === "group") {
+              element.elements.forEach((groupElement) => {
+                mutateElement(groupElement, {
+                  x: groupElement.x + x - lastX,
+                  y: groupElement.y + y - lastY,
+                });
+              });
+            }
           });
           lastX = x;
           lastY = y;

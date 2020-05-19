@@ -5,6 +5,7 @@ import {
   ExcalidrawGenericElement,
   NonDeleted,
   TextAlign,
+  ExcalidrawGroupElement,
 } from "../element/types";
 import { measureText } from "../utils";
 import { randomInteger, randomId } from "../random";
@@ -162,4 +163,16 @@ export function duplicateElement<TElement extends Mutable<ExcalidrawElement>>(
     copy = Object.assign(copy, overrides);
   }
   return copy;
+}
+
+export function groupElements({
+  elements,
+  ...opts
+}: {
+  elements: NonDeleted<ExcalidrawElement>[];
+} & ElementConstructorOpts): ExcalidrawGroupElement {
+  return {
+    ..._newElementBase<ExcalidrawGroupElement>("group", opts),
+    elements,
+  };
 }

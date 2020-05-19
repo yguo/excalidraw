@@ -35,9 +35,35 @@ export const resizeElements = (
   event: PointerEvent, // XXX we want to make it independent?
   pointerX: number,
   pointerY: number,
-) => {
+): boolean => {
   if (selectedElements.length === 1) {
     const [element] = selectedElements;
+    if (element.type === "group") {
+      let result = false;
+      if (resizeHandle === "rotation") {
+        // TODO: rotateMultipleElemen
+      } else {
+        result = resizeElements(
+          resizeHandle,
+          setResizeHandle,
+          element.elements,
+          resizeArrowDirection,
+          event,
+          pointerX,
+          pointerY,
+        );
+      }
+      if (result) {
+        const [minX, minY, maxX, maxY] = getCommonBounds(element.elements);
+        mutateElement(element, {
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY,
+        });
+      }
+      return result;
+    }
     if (resizeHandle === "rotation") {
       rotateSingleElement(element, pointerX, pointerY, event.shiftKey);
     } else if (

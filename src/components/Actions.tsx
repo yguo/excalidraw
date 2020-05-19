@@ -78,6 +78,7 @@ export function SelectedShapeActions({
           <div className="buttonList">
             {renderAction("duplicateSelection")}
             {renderAction("deleteSelectedElements")}
+            {renderAction("groupSelected")}
           </div>
         </fieldset>
       )}

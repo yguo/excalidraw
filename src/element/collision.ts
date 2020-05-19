@@ -208,6 +208,10 @@ export function hitTest(
   } else if (element.type === "selection") {
     console.warn("This should not happen, we need to investigate why it does.");
     return false;
+  } else if (element.type === "group") {
+    return element.elements.some((groupElement) =>
+      hitTest(groupElement, appState, x, y, zoom),
+    );
   }
   throw new Error(`Unimplemented type ${element.type}`);
 }

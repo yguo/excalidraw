@@ -372,6 +372,19 @@ export function renderElement(
       );
       break;
     }
+    case "group": {
+      element.elements.forEach((groupElement) => {
+        renderElement(
+          groupElement,
+          rc,
+          context,
+          renderOptimizations,
+          sceneState,
+        );
+      });
+
+      break;
+    }
     case "rectangle":
     case "diamond":
     case "ellipse":
