@@ -296,7 +296,7 @@ export default function App({
   };
 
   const updateScene = () => {
-    const sceneData = {
+   /* const sceneData = {
       elements: restoreElements(
         convertToExcalidrawElements([
           {
@@ -335,10 +335,11 @@ export default function App({
         null,
       ),
       appState: {
-        viewBackgroundColor: "#edf2ff",
+        viewBackgroundColor: "#ffffff",
       },
-    };
-    excalidrawAPI?.updateScene(sceneData);
+
+    }; */
+  //  excalidrawAPI?.updateScene(sceneData);
   };
 
   const onLinkOpen = useCallback(
