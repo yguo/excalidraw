@@ -647,8 +647,6 @@ export default function ExampleApp({
   return (
     <div className="App" ref={appRef}>
       <h3>{appTitle}</h3>
-      {/* TODO fix type */}
-
     </div>
   );
 }
