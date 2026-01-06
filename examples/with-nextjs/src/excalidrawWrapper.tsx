@@ -9,13 +9,13 @@ import App from "../../with-script-in-browser/components/ExampleApp";
 const ExcalidrawWrapper: React.FC = () => {
   return (
     <>
-      {/* <App
-        appTitle={"Excalidraw with Nextjs Example"}
-        useCustom={(api: any, args?: any[]) => {}}
+      <App
+        appTitle={"Eric Draw"}
+        useCustom={(api: any, args?: any[]) => { }}
         excalidrawLib={excalidrawLib}
-      > */}
-      <Excalidraw />
-      {/* </App> */}
+      >
+        <Excalidraw />
+      </App>
     </>
   );
 };
