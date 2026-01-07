@@ -1,21 +1,18 @@
-import { sql } from "drizzle-orm";
-import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { pgTable, text, timestamp, boolean, json, integer, primaryKey } from 'drizzle-orm/pg-core';
 
-export const users = sqliteTable("user", {
-    id: text("id").primaryKey(),
-    name: text("name"),
-    email: text("email").notNull(),
-    emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
-    image: text("image"),
-    libraryItems: text("libraryItems", { mode: "json" }),
+export const users = pgTable('users', {
+    name: text('name'),
+    email: text('email').notNull().primaryKey(),
+    image: text('image'),
+    libraryItems: json('libraryItems').$type<any[]>(),
 });
 
-export const accounts = sqliteTable(
+export const accounts = pgTable(
     "account",
     {
         userId: text("userId")
             .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
+            .references(() => users.email, { onDelete: "cascade" }),
         type: text("type").notNull(),
         provider: text("provider").notNull(),
         providerAccountId: text("providerAccountId").notNull(),
@@ -28,30 +25,27 @@ export const accounts = sqliteTable(
         session_state: text("session_state"),
     },
     (account) => ({
-        // composite primary key removed for simplicity in sqlite simple setup, or keep it
-        // pk: primaryKey({ columns: [account.provider, account.providerAccountId] }),
+        pk: primaryKey({ columns: [account.provider, account.providerAccountId] }),
     })
 );
 
-export const sessions = sqliteTable("session", {
+export const sessions = pgTable("session", {
     sessionToken: text("sessionToken").primaryKey(),
     userId: text("userId")
         .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-    expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+        .references(() => users.email, { onDelete: "cascade" }),
+    expires: timestamp("expires").notNull(),
 });
 
-export const boards = sqliteTable("board", {
+export const boards = pgTable("board", {
     id: text("id").primaryKey(),
-    userId: text("userId")
-        .notNull()
-    // In a real app we might reference users.id if we use database persistence for auth
-    // But if using JWT strategy only, we might just store the email or sub.
-    // For now, let's assume we link to the user email or ID if available.
-    ,
+    userId: text("userId").notNull(),
     title: text("title").notNull(),
     slug: text("slug").unique(),
-    isPublic: integer("isPublic", { mode: "boolean" }).default(false),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
+    isPublic: boolean("isPublic").default(false),
+    elements: json("elements").$type<any[]>(),
+    appState: json("appState").$type<any>(),
+    files: json("files").$type<any>(),
+    createdAt: timestamp("createdAt").defaultNow(),
+    updatedAt: timestamp("updatedAt").defaultNow(),
 });

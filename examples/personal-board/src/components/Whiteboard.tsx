@@ -46,12 +46,12 @@ interface WhiteboardProps {
     boardId: string
     initialData: any
     viewMode?: boolean
+    serverUpdatedAt?: number
 }
 
-export default function Whiteboard({ boardId, initialData, viewMode = false }: WhiteboardProps) {
+export default function Whiteboard({ boardId, initialData, viewMode = false, serverUpdatedAt = 0 }: WhiteboardProps) {
     const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null)
 
-    // Load library on mount
     // Load library on mount (and check for hash import)
     useEffect(() => {
         if (!excalidrawAPI) return
@@ -106,10 +106,37 @@ export default function Whiteboard({ boardId, initialData, viewMode = false }: W
         loadLib()
     }, [excalidrawAPI])
 
+    // Restore from Local Storage if newer
+    useEffect(() => {
+        if (!excalidrawAPI) return
+
+        try {
+            const lsKey = `board-data-${boardId}`
+            const localDataStr = localStorage.getItem(lsKey)
+            if (localDataStr) {
+                const localData = JSON.parse(localDataStr)
+                if (localData.updatedAt > serverUpdatedAt && localData.elements && localData.elements.length > 0) {
+                    // Local data is newer, restore it
+
+                    excalidrawAPI.updateScene({
+                        elements: localData.elements,
+                        appState: localData.appState,
+                    })
+                    if (localData.files) {
+                        excalidrawAPI.addFiles(Object.values(localData.files))
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to restore from LS", e)
+        }
+    }, [excalidrawAPI, boardId, serverUpdatedAt])
+
+
     // Debounced library save
     const debouncedSaveLibrary = useDebouncedCallback(async (items) => {
         await saveLibrary(items)
-    }, 1000)
+    }, 200)
 
     const onLibraryChange = (items: any) => {
         debouncedSaveLibrary(items)
@@ -118,11 +145,37 @@ export default function Whiteboard({ boardId, initialData, viewMode = false }: W
     // Debounced save
     const debouncedSave = useDebouncedCallback(async (elements, appState, files) => {
         if (viewMode) return
-        await saveBoard(boardId, elements, appState, files)
-    }, 500) // Reduced to 500ms for responsiveness
+
+        // Sanitize all data for Server Actions to avoid serialization issues (e.g. Map/Set in appState)
+        const plainFiles = JSON.parse(JSON.stringify(files || {}))
+        const plainElements = JSON.parse(JSON.stringify(elements || []))
+        const plainAppState = JSON.parse(JSON.stringify(appState || {}))
+
+        await saveBoard(boardId, plainElements, plainAppState, plainFiles)
+    }, 200)
 
     const onChange = (elements: any, appState: any, files: any) => {
-        debouncedSave(elements, appState, files)
+        // Robustly merge files
+        let currentFiles = files || {};
+        if (excalidrawAPI) {
+            const apiFiles = excalidrawAPI.getFiles();
+            currentFiles = { ...currentFiles, ...apiFiles };
+        }
+
+        // Save to Local Storage immediately (Backup)
+        try {
+            const lsKey = `board-data-${boardId}`
+            localStorage.setItem(lsKey, JSON.stringify({
+                elements,
+                appState,
+                files: currentFiles,
+                updatedAt: Date.now()
+            }))
+        } catch (e) {
+            // Ignore LS errors
+        }
+
+        debouncedSave(elements, appState, currentFiles)
     }
 
     // Force save on blur / unmount
@@ -132,15 +185,24 @@ export default function Whiteboard({ boardId, initialData, viewMode = false }: W
                 const elements = excalidrawAPI.getSceneElements()
                 const appState = excalidrawAPI.getAppState()
                 const files = excalidrawAPI.getFiles()
-                saveBoard(boardId, elements, appState, files)
+
+                // Sanitize all data for Server Actions
+                const plainFiles = JSON.parse(JSON.stringify(files || {}))
+                const plainElements = JSON.parse(JSON.stringify(elements || []))
+                const plainAppState = JSON.parse(JSON.stringify(appState || {}))
+
+                saveBoard(boardId, plainElements, plainAppState, plainFiles)
             }
         }
-        document.addEventListener("visibilitychange", handleVisibilityChange)
+        // ... (rest is same)
+
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange)
-            // Check if clean up save is needed, but unmount might be too late for async server action if tab closes
+            // Flush any pending debounced save on component unmount (navigation)
+            debouncedSave.flush()
+            debouncedSaveLibrary.flush()
         }
-    }, [excalidrawAPI, boardId])
+    }, [excalidrawAPI, boardId, debouncedSave])
 
     // Pass initial files
     const initialFiles = initialData?.files || null

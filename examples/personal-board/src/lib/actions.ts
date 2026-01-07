@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { v4 as uuidv4 } from "uuid"
 
+// Note: Postgres adapter returns arrays, so we destructure [result] instead of .get()
+
 export async function getBoards() {
     const session = await auth()
     if (!session?.user?.email) return []
@@ -48,31 +50,89 @@ export async function deleteBoard(id: string) {
     revalidatePath("/dashboard")
 }
 
-import { saveBoardData, getBoardData as getBoardDataStorage } from "./storage"
+
 
 export async function saveBoard(id: string, elements: any, appState: any, files: any) {
     const session = await auth()
     if (!session?.user?.email) return
 
+
+
+
+
     // Check ownership
-    // const board = await db.query.boards.findFirst(...)
+    const [board] = await db.select().from(boards).where(eq(boards.id, id))
+    if (!board) {
 
-    await saveBoardData(id, { elements, appState, files })
+        return
+    }
 
-    // Update timestamp
-    await db.update(boards).set({ updatedAt: new Date() }).where(eq(boards.id, id))
+    // Update DB
+    // Maxwell: Upload files to Vercel Blob if they are Data URLs
+    if (files) {
+        const uploadPromises = Object.keys(files).map(async (key) => {
+            const file = files[key];
+            if (file.dataURL && file.dataURL.startsWith("data:image/")) {
+                try {
+                    const { put } = await import("@vercel/blob");
+                    // Extract base64
+                    const base64Data = file.dataURL.split(',')[1];
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    // Generate filename
+                    const ext = file.mimeType.split('/')[1] || 'bin';
+                    const filename = `${file.id}.${ext}`;
+
+                    const blob = await put(filename, buffer, {
+                        access: 'public',
+                    });
+
+                    file.dataURL = blob.url;
+                } catch (error) {
+                    console.error(`Failed to upload file ${file.id} to blob:`, error);
+                    // Keep original dataURL if upload fails
+                }
+            }
+        });
+        await Promise.all(uploadPromises);
+    }
+
+    // Update DB
+    try {
+
+        await db.update(boards).set({
+            elements,
+            appState,
+            files,
+            updatedAt: new Date()
+        }).where(eq(boards.id, id))
+
+    } catch (e) {
+        console.error(e)
+    }
+
+    revalidatePath(`/dashboard/${id}`)
+    revalidatePath("/dashboard")
 }
 
 export async function getBoard(id: string) {
     const session = await auth()
-    // if (!session?.user?.email) return null // Public might be allowed?
 
-    // Check DB meta
-    const board = await db.select().from(boards).where(eq(boards.id, id)).get()
-    if (!board) return null
+    // Load full board from DB
+    const [board] = await db.select().from(boards).where(eq(boards.id, id))
 
-    // Load content
-    const content = await getBoardDataStorage(id)
+    if (!board) {
+        return null
+    }
+
+    // Helper to construct "content" object expected by UI similar to old storage format
+    const content = {
+        elements: board.elements,
+        appState: board.appState,
+        files: board.files
+    }
+
+    // Return combined object. Note: UI might expect { ...board, content: { ... } } or flattened.
+    // Previous code: return { ...board, content }
     return { ...board, content }
 }
 
@@ -80,7 +140,7 @@ export async function toggleShare(id: string) {
     const session = await auth()
     if (!session?.user?.email) return
 
-    const board = await db.select().from(boards).where(eq(boards.id, id)).get()
+    const [board] = await db.select().from(boards).where(eq(boards.id, id))
     if (!board) return
 
     const newValue = !board.isPublic
@@ -90,11 +150,14 @@ export async function toggleShare(id: string) {
 }
 
 export async function getPublicBoard(id: string) {
-    const board = await db.select().from(boards).where(eq(boards.id, id)).get()
+    const [board] = await db.select().from(boards).where(eq(boards.id, id))
     if (!board || !board.isPublic) return null
 
-    // Load content
-    const content = await getBoardDataStorage(id)
+    const content = {
+        elements: board.elements,
+        appState: board.appState,
+        files: board.files
+    }
     return { ...board, content }
 }
 
@@ -104,7 +167,7 @@ export async function updateBoardTitle(id: string, title: string) {
     const session = await auth()
     if (!session?.user?.email) return
 
-    const board = await db.select().from(boards).where(eq(boards.id, id)).get()
+    const [board] = await db.select().from(boards).where(eq(boards.id, id))
     if (!board) return
 
     // Simple ownership check
@@ -118,16 +181,37 @@ export async function updateBoardTitle(id: string, title: string) {
 import { users } from "@/db/schema"
 
 export async function getLibrary() {
-    const session = await auth()
-    if (!session?.user?.email) return []
 
-    const user = await db.select().from(users).where(eq(users.email, session.user.email)).get()
+    const session = await auth()
+    if (!session?.user?.email) {
+
+        return []
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.email, session.user.email))
+
     return user?.libraryItems || []
 }
 
 export async function saveLibrary(libraryItems: any) {
-    const session = await auth()
-    if (!session?.user?.email) return
 
-    await db.update(users).set({ libraryItems }).where(eq(users.email, session.user.email))
+    const session = await auth()
+    if (!session?.user?.email) {
+
+        return
+    }
+
+
+
+    // Maxwell: Fix - Use UPSERT to ensure user exists.
+    // Local dev DB might be empty, preventing UPDATE from working.
+    await db.insert(users).values({
+        email: session.user.email,
+        name: session.user.name || "User",
+        image: session.user.image,
+        libraryItems
+    }).onConflictDoUpdate({
+        target: users.email,
+        set: { libraryItems }
+    })
 }

@@ -31,6 +31,7 @@ export default async function BoardPage({ params }: PageProps) {
                 <Whiteboard
                     boardId={boardId}
                     initialData={board.content}
+                    serverUpdatedAt={board.updatedAt ? new Date(board.updatedAt).getTime() : 0}
                 />
             </div>
         </div>

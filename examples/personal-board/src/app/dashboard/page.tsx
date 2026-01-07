@@ -25,7 +25,7 @@ export default async function DashboardPage() {
                     </button>
                 </form>
 
-                {boards.map((board) => (
+                {boards.map((board: any) => (
                     <Card key={board.id} className="flex flex-col h-[200px] hover:shadow-md transition-shadow relative group">
                         <Link href={`/dashboard/${board.id}`} className="flex-1">
                             <CardHeader>
