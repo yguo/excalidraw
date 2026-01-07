@@ -10,7 +10,7 @@ import "./Modal.scss";
 
 import type { AppState } from "../types";
 
-export const Modal: React.FC<{
+export const Modal = (props: {
   className?: string;
   children: React.ReactNode;
   maxWidth?: number;
@@ -18,7 +18,7 @@ export const Modal: React.FC<{
   labelledBy: string;
   theme?: AppState["theme"];
   closeOnClickOutside?: boolean;
-}> = (props) => {
+}): any => {
   const { closeOnClickOutside = true } = props;
   const modalRoot = useCreatePortalContainer({
     className: "excalidraw-modal-container",
