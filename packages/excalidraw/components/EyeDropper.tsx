@@ -33,7 +33,7 @@ export type EyeDropperProperties = {
 
 export const activeEyeDropperAtom = atom<null | EyeDropperProperties>(null);
 
-export const EyeDropper: React.FC<{
+export const EyeDropper = ({ onCancel, onChange, onSelect, colorPickerType }: {
   onCancel: () => void;
   onSelect: EyeDropperProperties["onSelect"];
   /** called when color changes, on pointerdown for preview */
@@ -44,7 +44,7 @@ export const EyeDropper: React.FC<{
     event: { altKey: boolean },
   ) => void;
   colorPickerType: EyeDropperProperties["colorPickerType"];
-}> = ({ onCancel, onChange, onSelect, colorPickerType }) => {
+}): any => {
   const eyeDropperContainer = useCreatePortalContainer({
     className: "excalidraw-eye-dropper-backdrop",
     parentSelector: ".excalidraw-eye-dropper-container",
