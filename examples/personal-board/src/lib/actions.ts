@@ -50,14 +50,14 @@ export async function deleteBoard(id: string) {
 
 import { saveBoardData, getBoardData as getBoardDataStorage } from "./storage"
 
-export async function saveBoard(id: string, elements: any, appState: any) {
+export async function saveBoard(id: string, elements: any, appState: any, files: any) {
     const session = await auth()
     if (!session?.user?.email) return
 
     // Check ownership
     // const board = await db.query.boards.findFirst(...)
 
-    await saveBoardData(id, { elements, appState })
+    await saveBoardData(id, { elements, appState, files })
 
     // Update timestamp
     await db.update(boards).set({ updatedAt: new Date() }).where(eq(boards.id, id))
@@ -99,3 +99,35 @@ export async function getPublicBoard(id: string) {
 }
 
 
+
+export async function updateBoardTitle(id: string, title: string) {
+    const session = await auth()
+    if (!session?.user?.email) return
+
+    const board = await db.select().from(boards).where(eq(boards.id, id)).get()
+    if (!board) return
+
+    // Simple ownership check
+    if (board.userId !== session.user.email) return
+
+    await db.update(boards).set({ title, updatedAt: new Date() }).where(eq(boards.id, id))
+    revalidatePath("/dashboard")
+    revalidatePath(`/dashboard/${id}`)
+}
+
+import { users } from "@/db/schema"
+
+export async function getLibrary() {
+    const session = await auth()
+    if (!session?.user?.email) return []
+
+    const user = await db.select().from(users).where(eq(users.email, session.user.email)).get()
+    return user?.libraryItems || []
+}
+
+export async function saveLibrary(libraryItems: any) {
+    const session = await auth()
+    if (!session?.user?.email) return
+
+    await db.update(users).set({ libraryItems }).where(eq(users.email, session.user.email))
+}

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutGrid, Plus, Settings } from "lucide-react"
+import { createBoard } from "@/lib/actions"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,10 +33,12 @@ export function Sidebar({ user }: SidebarProps) {
 
             <div className="flex-1 flex flex-col pt-4">
                 <div className="px-4 mb-4">
-                    <Button size="sm" className="w-full justify-start" variant="default">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Board
-                    </Button>
+                    <form action={createBoard}>
+                        <Button size="sm" className="w-full justify-start" variant="default">
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Board
+                        </Button>
+                    </form>
                 </div>
 
                 <nav className="grid items-start px-2 text-sm font-medium lg:px-4">

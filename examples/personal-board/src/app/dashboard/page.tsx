@@ -11,12 +11,6 @@ export default async function DashboardPage() {
         <>
             <div className="flex items-center">
                 <h1 className="text-lg font-semibold md:text-2xl">My Boards</h1>
-                <form action={createBoard} className="ml-auto">
-                    <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Board
-                    </Button>
-                </form>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 

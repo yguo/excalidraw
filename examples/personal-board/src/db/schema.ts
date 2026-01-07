@@ -7,6 +7,7 @@ export const users = sqliteTable("user", {
     email: text("email").notNull(),
     emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
     image: text("image"),
+    libraryItems: text("libraryItems", { mode: "json" }),
 });
 
 export const accounts = sqliteTable(
