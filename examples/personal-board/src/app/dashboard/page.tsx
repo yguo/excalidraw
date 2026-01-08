@@ -16,6 +16,7 @@ export default async function DashboardPage() {
 
                 <form action={createBoard}>
                     <button className="w-full h-full text-left">
+                        {/* @ts-expect-error Server Component Type Issue */}
                         <Card className="flex flex-col items-center justify-center p-6 border-dashed shadow-none hover:bg-muted/50 cursor-pointer transition-colors h-[200px]">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                 <Plus className="h-8 w-8" />
