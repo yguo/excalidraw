@@ -1,4 +1,4 @@
-import { getBoard } from "@/lib/actions"
+import { getBoard, getLibrary } from "@/lib/actions"
 import { BoardTitle } from "@/components/BoardTitle"
 import Whiteboard from "@/components/Whiteboard"
 import { notFound } from "next/navigation"
@@ -13,6 +13,7 @@ interface PageProps {
 export default async function BoardPage({ params }: PageProps) {
     const { boardId } = params
     const board = await getBoard(boardId)
+    const libraryItems = await getLibrary()
 
     if (!board) {
         return notFound()
@@ -32,6 +33,7 @@ export default async function BoardPage({ params }: PageProps) {
                     boardId={boardId}
                     initialData={board.content}
                     serverUpdatedAt={board.updatedAt ? new Date(board.updatedAt).getTime() : 0}
+                    initialLibraryItems={libraryItems}
                 />
             </div>
         </div>

@@ -47,9 +47,10 @@ interface WhiteboardProps {
     initialData: any
     viewMode?: boolean
     serverUpdatedAt?: number
+    initialLibraryItems?: any
 }
 
-export default function Whiteboard({ boardId, initialData, viewMode = false, serverUpdatedAt = 0 }: WhiteboardProps) {
+export default function Whiteboard({ boardId, initialData, viewMode = false, serverUpdatedAt = 0, initialLibraryItems = [] }: WhiteboardProps) {
     const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null)
 
     // Load library on mount (and check for hash import)
@@ -57,9 +58,9 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
         if (!excalidrawAPI) return
 
         const loadLib = async () => {
-            // Maxwell: 1. Load persisted library first
-            const persistedLibraryItems = await getLibrary()
-            let finalLibrary = persistedLibraryItems || []
+            // Maxwell: 1. Perist from prop is handled by initialData, but we assume it might not be enough if we want to merge?
+            // Actually, initialData libraryItems REPLACES everything.
+            let finalLibrary = initialLibraryItems || []
 
             // Maxwell: 2. Check for URL hash import
             if (typeof window !== "undefined") {
@@ -82,6 +83,13 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
 
                                     // Clear hash
                                     window.history.replaceState(null, "", window.location.pathname)
+
+                                    // If we imported something, update Excalidraw and persist
+                                    excalidrawAPI.updateLibrary({
+                                        libraryItems: finalLibrary,
+                                        merge: true
+                                    })
+                                    await saveLibrary(finalLibrary)
                                 }
                             }
                         }
@@ -90,21 +98,9 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
                     }
                 }
             }
-
-            // 3. Update Excalidraw
-            if (finalLibrary && Array.isArray(finalLibrary) && finalLibrary.length > 0) {
-                excalidrawAPI.updateLibrary({
-                    libraryItems: finalLibrary
-                })
-            }
-            // If we imported something, we should probably save it back immediately to persistence
-            // to ensure it sticks even if onLibraryChange doesn't fire immediately.
-            if (finalLibrary.length > (persistedLibraryItems?.length || 0)) {
-                await saveLibrary(finalLibrary)
-            }
         }
         loadLib()
-    }, [excalidrawAPI])
+    }, [excalidrawAPI, initialLibraryItems])
 
     // Restore from Local Storage if newer
     useEffect(() => {
@@ -226,6 +222,7 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
                         collaborators: []
                     },
                     files: initialData?.files || null, // Pass files
+                    libraryItems: initialLibraryItems, // Pass library items (server side)
                     scrollToContent: true
                 }}
                 onChange={onChange}

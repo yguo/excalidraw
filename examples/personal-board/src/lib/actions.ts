@@ -205,13 +205,18 @@ export async function saveLibrary(libraryItems: any) {
 
     // Maxwell: Fix - Use UPSERT to ensure user exists.
     // Local dev DB might be empty, preventing UPDATE from working.
+    // Maxwell: Enforce status="unpublished" for personal library items
+    const starttizedItems = Array.isArray(libraryItems)
+        ? libraryItems.map((item: any) => ({ ...item, status: "unpublished" }))
+        : [];
+
     await db.insert(users).values({
         email: session.user.email,
         name: session.user.name || "User",
         image: session.user.image,
-        libraryItems
+        libraryItems: starttizedItems
     }).onConflictDoUpdate({
         target: users.email,
-        set: { libraryItems }
+        set: { libraryItems: starttizedItems }
     })
 }
