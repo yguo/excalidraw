@@ -142,17 +142,33 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
         debouncedSaveLibrary(items)
     }
 
-    // Debounced save
-    const debouncedSave = useDebouncedCallback(async (elements, appState, files) => {
+    // Debounced save for Cloud (relaxed to 1000ms)
+    const debouncedSaveCloud = useDebouncedCallback(async (elements, appState, files) => {
         if (viewMode) return
 
         // Sanitize all data for Server Actions to avoid serialization issues (e.g. Map/Set in appState)
+        // Deep cloning here, OFF the main thread of user interaction (delayed)
         const plainFiles = JSON.parse(JSON.stringify(files || {}))
         const plainElements = JSON.parse(JSON.stringify(elements || []))
         const plainAppState = JSON.parse(JSON.stringify(appState || {}))
 
         await saveBoard(boardId, plainElements, plainAppState, plainFiles)
-    }, 200)
+    }, 1000)
+
+    // Debounced save for Local Storage (500ms - frequent enough to prevent loss, but not blocking every frame)
+    const debouncedSaveLS = useDebouncedCallback((elements, appState, files, boardId) => {
+        try {
+            const lsKey = `board-data-${boardId}`
+            localStorage.setItem(lsKey, JSON.stringify({
+                elements,
+                appState,
+                files,
+                updatedAt: Date.now()
+            }))
+        } catch (e) {
+            // Ignore LS errors
+        }
+    }, 500)
 
     const onChange = (elements: any, appState: any, files: any) => {
         // Robustly merge files
@@ -162,20 +178,10 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
             currentFiles = { ...currentFiles, ...apiFiles };
         }
 
-        // Save to Local Storage immediately (Backup)
-        try {
-            const lsKey = `board-data-${boardId}`
-            localStorage.setItem(lsKey, JSON.stringify({
-                elements,
-                appState,
-                files: currentFiles,
-                updatedAt: Date.now()
-            }))
-        } catch (e) {
-            // Ignore LS errors
-        }
-
-        debouncedSave(elements, appState, currentFiles)
+        // Trigger debounced saves
+        // This is FAST now - no sync I/O, no deep cloning on the critical path
+        debouncedSaveLS(elements, appState, currentFiles, boardId)
+        debouncedSaveCloud(elements, appState, currentFiles)
     }
 
     // Force save on blur / unmount
@@ -199,10 +205,11 @@ export default function Whiteboard({ boardId, initialData, viewMode = false, ser
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange)
             // Flush any pending debounced save on component unmount (navigation)
-            debouncedSave.flush()
+            debouncedSaveCloud.flush()
+            debouncedSaveLS.flush()
             debouncedSaveLibrary.flush()
         }
-    }, [excalidrawAPI, boardId, debouncedSave])
+    }, [excalidrawAPI, boardId, debouncedSaveCloud, debouncedSaveLS])
 
     // Pass initial files
     const initialFiles = initialData?.files || null
